@@ -25,13 +25,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
-import androidx.camera.core.AspectRatio
-import androidx.camera.core.Camera
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.*
 import androidx.camera.core.ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888
-import androidx.camera.core.ImageProxy
-import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -39,21 +34,21 @@ import com.example.pj4test.ProjectConfiguration
 import java.util.LinkedList
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import com.example.pj4test.cameraInference.PersonClassifier
+import com.example.pj4test.cameraInference.PlantHealthClassifier
 import com.example.pj4test.databinding.FragmentCameraBinding
 import org.tensorflow.lite.task.vision.detector.Detection
 
-class CameraFragment : Fragment(), PersonClassifier.DetectorListener {
+class CameraFragment : Fragment(), PlantHealthClassifier.DetectorListener {
     private val TAG = "CameraFragment"
 
     private var _fragmentCameraBinding: FragmentCameraBinding? = null
 
     private val fragmentCameraBinding
         get() = _fragmentCameraBinding!!
-    
-    private lateinit var personView: TextView
-    
-    private lateinit var personClassifier: PersonClassifier
+
+    private lateinit var plantHealthView: TextView
+
+    private lateinit var plantHealthClassifier: PlantHealthClassifier
     private lateinit var bitmapBuffer: Bitmap
     private var preview: Preview? = null
     private var imageAnalyzer: ImageAnalysis? = null
@@ -84,9 +79,9 @@ class CameraFragment : Fragment(), PersonClassifier.DetectorListener {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        personClassifier = PersonClassifier()
-        personClassifier.initialize(requireContext())
-        personClassifier.setDetectorListener(this)
+        plantHealthClassifier = PlantHealthClassifier()
+        plantHealthClassifier.initialize(requireContext())
+        plantHealthClassifier.setDetectorListener(this)
 
         // Initialize our background executor
         cameraExecutor = Executors.newSingleThreadExecutor()
@@ -97,7 +92,7 @@ class CameraFragment : Fragment(), PersonClassifier.DetectorListener {
             setUpCamera()
         }
 
-        personView = fragmentCameraBinding.PersonView
+        plantHealthView = fragmentCameraBinding.PlantHealthView
     }
 
     // Initialize CameraX, and prepare to bind the camera use cases
@@ -123,12 +118,11 @@ class CameraFragment : Fragment(), PersonClassifier.DetectorListener {
         val cameraSelector =
             CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK).build()
 
-        // Preview. Only using the 4:3 ratio because this is the closest to our models
-        preview =
-            Preview.Builder()
-                .setTargetAspectRatio(AspectRatio.RATIO_4_3)
-                .setTargetRotation(fragmentCameraBinding.viewFinder.display.rotation)
-                .build()
+        // Preview. Only using the 4:3 ratio because this is the closest to our modelspreview =
+        Preview.Builder()
+            .setTargetAspectRatio(AspectRatio.RATIO_4_3)
+            .setTargetRotation(fragmentCameraBinding.viewFinder.display.rotation)
+            .build()
         // Attach the viewfinder's surface provider to preview use case
         preview?.setSurfaceProvider(fragmentCameraBinding.viewFinder.surfaceProvider)
 
@@ -181,7 +175,7 @@ class CameraFragment : Fragment(), PersonClassifier.DetectorListener {
         val imageRotation = image.imageInfo.rotationDegrees
 
         // Pass Bitmap and rotation to the object detector helper for processing and detection
-        personClassifier.detect(bitmapBuffer, imageRotation)
+        plantHealthClassifier.detect(bitmapBuffer, imageRotation)
     }
 
     // Update UI after objects have been detected. Extracts original image height/width
@@ -199,19 +193,19 @@ class CameraFragment : Fragment(), PersonClassifier.DetectorListener {
                 imageHeight,
                 imageWidth
             )
-            
-            // find at least one bounding box of the person
-            val isPersonDetected: Boolean = results!!.find { it.categories[0].label == "person" } != null
-            
+
+            // find at least one bounding box of the plant
+            val isPlantDetected: Boolean = results!!.find { it.categories[0].label == "plant" } != null
+
             // change UI according to the result
-            if (isPersonDetected) {
-                personView.text = "PERSON"
-                personView.setBackgroundColor(ProjectConfiguration.activeBackgroundColor)
-                personView.setTextColor(ProjectConfiguration.activeTextColor)
+            if (isPlantDetected) {
+                plantHealthView.text = "PLANT HEALTHY"
+                plantHealthView.setBackgroundColor(ProjectConfiguration.activeBackgroundColor)
+                plantHealthView.setTextColor(ProjectConfiguration.activeTextColor)
             } else {
-                personView.text = "NO PERSON"
-                personView.setBackgroundColor(ProjectConfiguration.idleBackgroundColor)
-                personView.setTextColor(ProjectConfiguration.idleTextColor)
+                plantHealthView.text = "PLANT UNHEALTHY"
+                plantHealthView.setBackgroundColor(ProjectConfiguration.idleBackgroundColor)
+                plantHealthView.setTextColor(ProjectConfiguration.idleTextColor)
             }
 
             // Force a redraw
@@ -225,3 +219,4 @@ class CameraFragment : Fragment(), PersonClassifier.DetectorListener {
         }
     }
 }
+
